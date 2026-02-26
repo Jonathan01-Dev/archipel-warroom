@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&family=Orbitron:wght@400;700;900&display=swap');
+
+:root {
+  --bg: #080c10;
+  --surface: #0d1117;
+  --border: #1e2d3d;
+  --text: #c9d1d9;
+  --muted: #4a5568;
+  --accent: #00d4ff;
+  --danger: #ff4444;
+  --success: #00ff88;
+  --warning: #ffaa00;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  margin: 0;
+}
+
+.font-mono { font-family: 'Share Tech Mono', monospace; }
+.font-display { font-family: 'Orbitron', sans-serif; }
+
+/* Scanline effect */
+.scanlines::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Glow effects */
+.glow-cyan { text-shadow: 0 0 10px #00d4ff, 0 0 20px #00d4ff40; }
+.glow-green { text-shadow: 0 0 10px #00ff88, 0 0 20px #00ff8840; }
+.glow-red { text-shadow: 0 0 10px #ff4444, 0 0 20px #ff444440; }
+
+/* Progress bar */
+.progress-bar {
+  position: relative;
+  height: 8px;
+  background: #1e2d3d;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: -2px;
+  bottom: -2px;
+  width: 4px;
+  background: white;
+  filter: blur(2px);
+  border-radius: 2px;
+}
+
+/* Pulse animation */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+.animate-blink { animation: blink 1s step-end infinite; }
+.animate-slide-in { animation: slide-in 0.5s ease forwards; }
+
+/* Card borders */
+.card-border {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  position: relative;
+}
+
+.card-border::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0.5;
+}
