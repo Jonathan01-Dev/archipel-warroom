@@ -18,12 +18,17 @@ function authHeader(token: string): string {
 export async function getCommitCount(repo: string, since?: string): Promise<CommitSummary> {
   const token = getToken()
 
-  if (!token) {
-    console.warn("GITHUB_TOKEN non défini — retour données mockées")
-    return mockCommitData(repo)
-  }
-
   try {
+    if (!token) {
+      console.warn("GITHUB_TOKEN manquant — retours vides (0 commit)")
+      return {
+        count: 0,
+        lastCommitAt: null,
+        lastMessage: "GITHUB_TOKEN manquant sur le serveur",
+        authors: [],
+        lastCommitLines: null,
+      }
+    }
     const params = new URLSearchParams({ per_page: "100" })
     if (since) params.set("since", since)
 
@@ -92,17 +97,5 @@ export async function getCommitCount(repo: string, since?: string): Promise<Comm
     const message = err instanceof Error ? err.message : "Erreur réseau"
     console.error(`Erreur GitHub pour ${repo}:`, err)
     return { count: 0, lastCommitAt: null, lastMessage: message, authors: [], lastCommitLines: null }
-  }
-}
-
-// Données mockées pour développement sans token
-function mockCommitData(repo: string): CommitSummary {
-  const seed = repo.length
-  return {
-    count: (seed * 7) % 40 + 5,
-    lastCommitAt: new Date(Date.now() - Math.random() * 3600000).toISOString(),
-    lastMessage: "feat: ajout de la fonctionnalité principale",
-    authors: ["Dev1", "Dev2"],
-    lastCommitLines: { additions: (seed * 11) % 50 + 10, deletions: (seed * 5) % 20 },
   }
 }
