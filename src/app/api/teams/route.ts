@@ -21,7 +21,7 @@ export async function GET() {
     })
   )
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     teams: results,
     hackathon: {
       name: HACKATHON_CONFIG.name,
@@ -34,4 +34,8 @@ export async function GET() {
     },
     fetchedAt: new Date().toISOString(),
   })
+
+  // Empêche tout cache CDN/proxy sur /api/teams
+  response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+  return response
 }
