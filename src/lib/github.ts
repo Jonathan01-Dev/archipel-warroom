@@ -1,5 +1,3 @@
-const GITHUB_TOKEN = (process.env.GITHUB_TOKEN || "").trim()
-
 export interface CommitSummary {
   count: number
   lastCommitAt: string | null
@@ -8,15 +6,19 @@ export interface CommitSummary {
   lastCommitLines: { additions: number; deletions: number } | null
 }
 
-function authHeader(): string {
-  if (!GITHUB_TOKEN) return ""
-  return GITHUB_TOKEN.startsWith("ghp_")
-    ? `token ${GITHUB_TOKEN}`
-    : `Bearer ${GITHUB_TOKEN}`
+function getToken() {
+  return (process.env.GITHUB_TOKEN || "").trim()
+}
+
+function authHeader(token: string): string {
+  if (!token) return ""
+  return token.startsWith("ghp_") ? `token ${token}` : `Bearer ${token}`
 }
 
 export async function getCommitCount(repo: string, since?: string): Promise<CommitSummary> {
-  if (!GITHUB_TOKEN) {
+  const token = getToken()
+
+  if (!token) {
     console.warn("GITHUB_TOKEN non défini — retour données mockées")
     return mockCommitData(repo)
   }
@@ -30,7 +32,7 @@ export async function getCommitCount(repo: string, since?: string): Promise<Comm
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
     }
-    const auth = authHeader()
+    const auth = authHeader(token)
     if (auth) headers.Authorization = auth
 
     const res = await fetch(url, {
@@ -60,7 +62,11 @@ export async function getCommitCount(repo: string, since?: string): Promise<Comm
         const detailRes = await fetch(
           `https://api.github.com/repos/${repo}/commits/${commits[0].sha}`,
           {
-            headers: { ...(authHeader() ? { Authorization: authHeader() } : {}), Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" },
+            headers: {
+              ...(authHeader(token) ? { Authorization: authHeader(token) } : {}),
+              Accept: "application/vnd.github+json",
+              "X-GitHub-Api-Version": "2022-11-28",
+            },
             cache: "no-store",
           }
         )
