@@ -110,7 +110,7 @@ function TeamCard({
     <motion.div
       layout
       initial={false}
-      transition={{ type: "spring", stiffness: 350, damping: 30 }}
+      transition={{ type: "spring", stiffness: 400, damping: 32 }}
       className={`card-border rounded-lg p-5 ${isNewLeader ? "ring-2 ring-[#00d4ff] ring-offset-2 ring-offset-[var(--bg)]" : ""}`}
       style={{ borderColor: team.color + "40" }}
     >
@@ -172,14 +172,18 @@ function TeamCard({
         </div>
       </div>
 
-      {/* Lignes du dernier commit */}
-      {lines && (lines.additions > 0 || lines.deletions > 0) && (
-        <div className="flex items-center gap-3 mb-2 font-mono text-xs">
-          <span className="text-gray-500">Lignes :</span>
-          <span className="text-[#00ff88]">+{lines.additions}</span>
-          <span className="text-[#ff6384]">−{lines.deletions}</span>
-        </div>
-      )}
+      {/* Lignes écrites / commit (toujours affiché) */}
+      <div className="flex items-center gap-3 mb-2 font-mono text-xs">
+        <span className="text-gray-500">Lignes (dernier commit) :</span>
+        {lines ? (
+          <>
+            <span className="text-[#00ff88]">+{lines.additions}</span>
+            <span className="text-[#ff6384]">−{lines.deletions}</span>
+          </>
+        ) : (
+          <span className="text-gray-600">—</span>
+        )}
+      </div>
 
       {/* Last commit */}
       <div className="flex items-center gap-2 mt-3">
