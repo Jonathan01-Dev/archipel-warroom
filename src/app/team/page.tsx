@@ -4,21 +4,58 @@ import { useState } from "react"
 import { TEAMS } from "@/lib/teams"
 import { TeamIcon } from "@/components/TeamIcon"
 
-const LABELS = [
-  "Brainstorming en cours",
-  "Architecture définie",
-  "MVP en développement",
-  "Fonctionnalités de base OK",
-  "Tests en cours",
-  "Démo prête",
-  "Finitions & polish",
-  "Prêt à présenter 🎉",
+type SprintStep = {
+  id: number
+  name: string
+  percent: number
+  details: string
+}
+
+// Déclaration d'avancement par rapport aux sprints
+const SPRINTS: SprintStep[] = [
+  {
+    id: 0,
+    name: "Bootstrap & Architecture",
+    percent: 0,
+    details: "Repo actif, proto PKI, spec protocole",
+  },
+  {
+    id: 1,
+    name: "Couche Réseau P2P",
+    percent: 25,
+    details: "Découverte de pairs fonctionnelle",
+  },
+  {
+    id: 2,
+    name: "Chiffrement & Auth",
+    percent: 50,
+    details: "E2E chiffré, auth sans CA",
+  },
+  {
+    id: 3,
+    name: "Chunking & Transfert",
+    percent: 75,
+    details: "Transfert fichier 50 Mo multi-nœuds",
+  },
+  {
+    id: 4,
+    name: "Intégration & Polish",
+    percent: 90,
+    details: "CLI/UI démo, README complet",
+  },
+  {
+    id: 5,
+    name: "Finalisation DevPost",
+    percent: 100,
+    details: "Soumission DevPost, démo prête",
+  },
 ]
 
 export default function TeamPage() {
   const [teamId, setTeamId] = useState("")
-  const [progress, setProgress] = useState(0)
-  const [label, setLabel] = useState(LABELS[0])
+  const [progress, setProgress] = useState(SPRINTS[0].percent)
+  const [label, setLabel] = useState(SPRINTS[0].name)
+  const [selectedSprintId, setSelectedSprintId] = useState<number | null>(SPRINTS[0].id)
   const [customLabel, setCustomLabel] = useState("")
   const [useCustom, setUseCustom] = useState(false)
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
@@ -120,18 +157,36 @@ export default function TeamPage() {
           <div>
             <label className="font-mono text-xs text-gray-400 block mb-2">OÙ EN ÊTES-VOUS ?</label>
             <div className="space-y-1">
-              {LABELS.map((l) => (
+              {SPRINTS.map((step) => (
                 <button
-                  key={l}
-                  onClick={() => { setLabel(l); setUseCustom(false) }}
+                  key={step.id}
+                  onClick={() => {
+                    setSelectedSprintId(step.id)
+                    setUseCustom(false)
+                    setLabel(step.name)
+                    setProgress(step.percent)
+                  }}
                   className="w-full text-left px-3 py-2 rounded text-sm font-mono transition-all"
                   style={{
-                    background: !useCustom && label === l ? (team?.color ?? "#00d4ff") + "20" : "transparent",
-                    color: !useCustom && label === l ? (team?.color ?? "#00d4ff") : "#4a5568",
-                    borderLeft: `2px solid ${!useCustom && label === l ? (team?.color ?? "#00d4ff") : "transparent"}`,
+                    background:
+                      !useCustom && selectedSprintId === step.id
+                        ? (team?.color ?? "#00d4ff") + "20"
+                        : "transparent",
+                    color:
+                      !useCustom && selectedSprintId === step.id
+                        ? team?.color ?? "#00d4ff"
+                        : "#4a5568",
+                    borderLeft: `2px solid ${
+                      !useCustom && selectedSprintId === step.id
+                        ? team?.color ?? "#00d4ff"
+                        : "transparent"
+                    }`,
                   }}
                 >
-                  {l}
+                  <span className="block">{step.name}</span>
+                  <span className="block text-[10px] text-gray-500">
+                    {step.percent}% · {step.details}
+                  </span>
                 </button>
               ))}
 

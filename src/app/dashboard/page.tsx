@@ -203,6 +203,8 @@ export default function DashboardPage() {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
   const [error, setError] = useState(false)
   const [viewMode, setViewMode] = useState<"cards" | "bars">("cards")
+  const [manualEnd, setManualEnd] = useState<string | null>(null)
+  const [askRestartConfirm, setAskRestartConfirm] = useState(false)
 
   const fetchData = useCallback(async () => {
     try {
@@ -223,7 +225,15 @@ export default function DashboardPage() {
     return () => clearInterval(id)
   }, [fetchData])
 
-  const { display: countdown, isUrgent, isDone } = useCountdown(data?.hackathon.endTime ?? null)
+  // Chargement d'un éventuel chrono manuel (24h) depuis le localStorage
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const saved = window.localStorage.getItem("warroom_manual_end")
+    if (saved) setManualEnd(saved)
+  }, [])
+
+  const effectiveEndTime = manualEnd ?? data?.hackathon.endTime ?? null
+  const { display: countdown, isUrgent, isDone } = useCountdown(effectiveEndTime)
 
   // Rank teams by commits desc, then progress
   const rankedTeams = data
@@ -268,14 +278,50 @@ export default function DashboardPage() {
           style={{ borderColor: isUrgent ? "#ff4444" : isDone ? "#00ff88" : "#1e2d3d" }}
         >
           <div className="font-mono text-xs mb-1" style={{ color: isUrgent ? "#ff4444" : "#4a5568" }}>
-            {isDone ? "TERMINÉ" : isUrgent ? "⚠ TEMPS RESTANT" : "TEMPS RESTANT"}
+            {effectiveEndTime
+              ? isDone
+                ? "TERMINÉ"
+                : isUrgent
+                  ? "⚠ TEMPS RESTANT"
+                  : "TEMPS RESTANT"
+              : "PRÊT À DÉMARRER"}
           </div>
           <div
             className={`font-display font-black text-4xl ${isDone ? "glow-green" : isUrgent ? "glow-red" : "glow-cyan"}`}
             style={{ color: isDone ? "#00ff88" : isUrgent ? "#ff4444" : "#00d4ff" }}
           >
-            {isDone ? "00:00:00" : countdown}
+            {effectiveEndTime ? (isDone ? "00:00:00" : countdown) : "24:00:00"}
           </div>
+          <button
+            type="button"
+            className={`mt-2 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-[11px] transition-colors ${
+              askRestartConfirm
+                ? "border-[#ff4444] bg-[#ff444420] text-[#ff8888]"
+                : "border-[#00d4ff40] text-gray-300 hover:bg-[#00d4ff20] hover:text-[#00d4ff]"
+            }`}
+            onClick={() => {
+              // Première pression : demande de confirmation claire
+              if (effectiveEndTime && !isDone && !askRestartConfirm) {
+                setAskRestartConfirm(true)
+                // Annule la demande au bout de 8s si l'utilisateur ne confirme pas
+                setTimeout(() => setAskRestartConfirm(false), 8000)
+                return
+              }
+
+              const end = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+              setManualEnd(end)
+              setAskRestartConfirm(false)
+              if (typeof window !== "undefined") {
+                window.localStorage.setItem("warroom_manual_end", end)
+              }
+            }}
+          >
+            {effectiveEndTime && !isDone
+              ? askRestartConfirm
+                ? "Cliquer encore pour CONFIRMER"
+                : "Redémarrer 24h"
+              : "Démarrer 24h"}
+          </button>
         </div>
 
         {/* Stats globales */}
