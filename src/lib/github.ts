@@ -5,6 +5,7 @@ export interface CommitSummary {
   lastCommitAt: string | null
   lastMessage: string | null
   authors: string[]
+  lastCommitLines: { additions: number; deletions: number } | null
 }
 
 function authHeader(): string {
@@ -40,33 +41,48 @@ export async function getCommitCount(repo: string, since?: string): Promise<Comm
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
       const msg = (body.message as string) || ""
-      if (res.status === 404)
-        return { count: 0, lastCommitAt: null, lastMessage: "Repo introuvable", authors: [] }
-      if (res.status === 403)
-        return { count: 0, lastCommitAt: null, lastMessage: "Rate limit atteint", authors: [] }
-      if (res.status === 401)
-        return { count: 0, lastCommitAt: null, lastMessage: "Token invalide ou expiré", authors: [] }
-      return {
-        count: 0,
-        lastCommitAt: null,
-        lastMessage: msg || `Erreur ${res.status}`,
-        authors: [],
-      }
+      const empty = { count: 0, lastCommitAt: null, lastMessage: "", authors: [] as string[], lastCommitLines: null }
+      if (res.status === 404) return { ...empty, lastMessage: "Repo introuvable" }
+      if (res.status === 403) return { ...empty, lastMessage: "Rate limit atteint" }
+      if (res.status === 401) return { ...empty, lastMessage: "Token invalide ou expiré" }
+      return { ...empty, lastMessage: msg || `Erreur ${res.status}` }
     }
 
     const commits = await res.json()
     const authors = [...new Set(commits.map((c: any) => c.commit?.author?.name).filter(Boolean))] as string[]
+    let lastCommitLines: { additions: number; deletions: number } | null = null
+
+    if (commits.length > 0 && commits[0].sha) {
+      try {
+        const detailRes = await fetch(
+          `https://api.github.com/repos/${repo}/commits/${commits[0].sha}`,
+          {
+            headers: { ...(authHeader() ? { Authorization: authHeader() } : {}), Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" },
+            next: { revalidate: 30 },
+          }
+        )
+        if (detailRes.ok) {
+          const detail = await detailRes.json()
+          if (detail.stats) {
+            lastCommitLines = { additions: detail.stats.additions ?? 0, deletions: detail.stats.deletions ?? 0 }
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
 
     return {
       count: commits.length,
       lastCommitAt: commits[0]?.commit?.author?.date ?? null,
       lastMessage: commits[0]?.commit?.message?.split("\n")[0] ?? null,
       authors,
+      lastCommitLines,
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erreur réseau"
     console.error(`Erreur GitHub pour ${repo}:`, err)
-    return { count: 0, lastCommitAt: null, lastMessage: message, authors: [] }
+    return { count: 0, lastCommitAt: null, lastMessage: message, authors: [], lastCommitLines: null }
   }
 }
 
@@ -78,5 +94,6 @@ function mockCommitData(repo: string): CommitSummary {
     lastCommitAt: new Date(Date.now() - Math.random() * 3600000).toISOString(),
     lastMessage: "feat: ajout de la fonctionnalité principale",
     authors: ["Dev1", "Dev2"],
+    lastCommitLines: { additions: (seed * 11) % 50 + 10, deletions: (seed * 5) % 20 },
   }
 }

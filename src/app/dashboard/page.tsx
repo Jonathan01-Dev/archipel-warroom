@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import { TeamIcon } from "@/components/TeamIcon"
 
 interface CommitSummary {
@@ -8,6 +9,7 @@ interface CommitSummary {
   lastCommitAt: string | null
   lastMessage: string | null
   authors: string[]
+  lastCommitLines?: { additions: number; deletions: number } | null
 }
 
 interface TeamData {
@@ -88,18 +90,39 @@ function RankBadge({ rank }: { rank: number }) {
   )
 }
 
-// ---- Team Card ----
-function TeamCard({ team, rank }: { team: TeamData; rank: number }) {
+// ---- Team Card (avec animation layout) ----
+function TeamCard({
+  team,
+  rank,
+  isNewLeader,
+}: {
+  team: TeamData
+  rank: number
+  isNewLeader?: boolean
+}) {
   const lastCommit = timeAgo(team.commits.lastCommitAt)
   const isRecent = team.commits.lastCommitAt
     ? Date.now() - new Date(team.commits.lastCommitAt).getTime() < 5 * 60 * 1000
     : false
+  const lines = team.commits.lastCommitLines
 
   return (
-    <div
-      className="card-border rounded-lg p-5 animate-slide-in"
-      style={{ borderColor: team.color + "40", animationDelay: `${rank * 80}ms` }}
+    <motion.div
+      layout
+      initial={false}
+      transition={{ type: "spring", stiffness: 350, damping: 30 }}
+      className={`card-border rounded-lg p-5 ${isNewLeader ? "ring-2 ring-[#00d4ff] ring-offset-2 ring-offset-[var(--bg)]" : ""}`}
+      style={{ borderColor: team.color + "40" }}
     >
+      {isNewLeader && (
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="font-mono text-[10px] text-[#00d4ff] mb-2 font-bold"
+        >
+          ↑ Nouveau 1er
+        </motion.div>
+      )}
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
         <RankBadge rank={rank} />
@@ -149,6 +172,15 @@ function TeamCard({ team, rank }: { team: TeamData; rank: number }) {
         </div>
       </div>
 
+      {/* Lignes du dernier commit */}
+      {lines && (lines.additions > 0 || lines.deletions > 0) && (
+        <div className="flex items-center gap-3 mb-2 font-mono text-xs">
+          <span className="text-gray-500">Lignes :</span>
+          <span className="text-[#00ff88]">+{lines.additions}</span>
+          <span className="text-[#ff6384]">−{lines.deletions}</span>
+        </div>
+      )}
+
       {/* Last commit */}
       <div className="flex items-center gap-2 mt-3">
         <div className="font-mono text-xs text-gray-500">dernier commit :</div>
@@ -161,7 +193,7 @@ function TeamCard({ team, rank }: { team: TeamData; rank: number }) {
           → {team.commits.lastMessage}
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }
 
@@ -204,6 +236,18 @@ export default function DashboardPage() {
   const totalCommits = rankedTeams.reduce((s, t) => s + t.commits.count, 0)
   const maxCommits = rankedTeams.reduce((m, t) => Math.max(m, t.commits.count), 0) || 1
   const hasActivity = totalCommits > 0 || rankedTeams.some((t) => t.progress.progress > 0)
+
+  const prevFirstIdRef = useRef<string | null>(null)
+  const currentFirstId = rankedTeams[0]?.id ?? null
+  const newLeaderId =
+    currentFirstId != null &&
+    prevFirstIdRef.current != null &&
+    currentFirstId !== prevFirstIdRef.current
+      ? currentFirstId
+      : null
+  useEffect(() => {
+    prevFirstIdRef.current = currentFirstId
+  }, [currentFirstId])
 
   return (
     <div className="min-h-screen p-6 md:p-8" style={{ background: "var(--bg)" }}>
@@ -290,11 +334,22 @@ export default function DashboardPage() {
           <div className="font-mono text-gray-500 animate-blink">INITIALISATION DU WAR ROOM...</div>
         </div>
       ) : viewMode === "cards" ? (
-        <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))" }}>
-          {rankedTeams.map((team, i) => (
-            <TeamCard key={team.id} team={team} rank={i + 1} />
-          ))}
-        </div>
+        <motion.div
+          layout
+          className="grid gap-4"
+          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))" }}
+        >
+          <AnimatePresence mode="popLayout">
+            {rankedTeams.map((team, i) => (
+              <TeamCard
+                key={team.id}
+                team={team}
+                rank={i + 1}
+                isNewLeader={team.id === newLeaderId}
+              />
+            ))}
+          </AnimatePresence>
+        </motion.div>
       ) : (
         <div className="card-border rounded-xl p-5 md:p-6">
           {/* Message d'accueil quand tout est à zéro */}
