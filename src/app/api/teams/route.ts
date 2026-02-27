@@ -7,19 +7,10 @@ export const dynamic = "force-dynamic"
 export const revalidate = 0
 
 export async function GET() {
-  const startTime = HACKATHON_CONFIG.startTime
-    ? new Date(HACKATHON_CONFIG.startTime).getTime()
-    : 0
-  const now = Date.now()
-  const since =
-    startTime && now >= startTime
-      ? new Date(HACKATHON_CONFIG.startTime).toISOString()
-      : undefined
-
   const results = await Promise.all(
     TEAMS.map(async (team) => {
       const [commits, progress] = await Promise.all([
-        getCommitCount(team.githubRepo, since),
+        getCommitCount(team.githubRepo),
         Promise.resolve(getProgress(team.id)),
       ])
       return {

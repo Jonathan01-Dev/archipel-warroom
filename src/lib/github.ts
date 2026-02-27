@@ -35,7 +35,7 @@ export async function getCommitCount(repo: string, since?: string): Promise<Comm
 
     const res = await fetch(url, {
       headers,
-      next: { revalidate: 30 },
+      cache: "no-store",
     })
 
     if (!res.ok) {
@@ -58,7 +58,7 @@ export async function getCommitCount(repo: string, since?: string): Promise<Comm
           `https://api.github.com/repos/${repo}/commits/${commits[0].sha}`,
           {
             headers: { ...(authHeader() ? { Authorization: authHeader() } : {}), Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" },
-            next: { revalidate: 30 },
+            cache: "no-store",
           }
         )
         if (detailRes.ok) {
