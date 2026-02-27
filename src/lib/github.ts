@@ -49,7 +49,10 @@ export async function getCommitCount(repo: string, since?: string): Promise<Comm
     }
 
     const commits = await res.json()
-    const authors = [...new Set(commits.map((c: any) => c.commit?.author?.name).filter(Boolean))] as string[]
+    const authorsSet = new Set<string>(
+      (commits.map((c: any) => c.commit?.author?.name).filter(Boolean) as string[]) || [],
+    )
+    const authors = Array.from(authorsSet)
     let lastCommitLines: { additions: number; deletions: number } | null = null
 
     if (commits.length > 0 && commits[0].sha) {

@@ -56,12 +56,26 @@ export default function TeamPage() {
   const [progress, setProgress] = useState(SPRINTS[0].percent)
   const [label, setLabel] = useState(SPRINTS[0].name)
   const [selectedSprintId, setSelectedSprintId] = useState<number | null>(SPRINTS[0].id)
+  const [code, setCode] = useState("")
+  const [codeError, setCodeError] = useState(false)
   const [customLabel, setCustomLabel] = useState("")
   const [useCustom, setUseCustom] = useState(false)
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
 
   const submit = async () => {
-    if (!teamId) return
+    if (!teamId) {
+      if (typeof window !== "undefined") {
+        window.alert("Choisissez d'abord votre équipe dans la liste.")
+      }
+      return
+    }
+    if (!code.trim()) {
+      setCodeError(true)
+      if (typeof window !== "undefined") {
+        window.alert("Entrez le code secret de votre équipe.")
+      }
+      return
+    }
     setStatus("loading")
     try {
       const res = await fetch("/api/progress", {
@@ -71,10 +85,17 @@ export default function TeamPage() {
           teamId,
           progress,
           label: useCustom ? customLabel : label,
+          code,
         }),
       })
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        if (res.status === 401) {
+          setCodeError(true)
+        }
+        throw new Error()
+      }
       setStatus("success")
+      setCodeError(false)
       setTimeout(() => setStatus("idle"), 3000)
     } catch {
       setStatus("error")
@@ -108,7 +129,11 @@ export default function TeamPage() {
               {TEAMS.map((t) => (
                 <button
                   key={t.id}
-                  onClick={() => setTeamId(t.id)}
+                  onClick={() => {
+                    setTeamId(t.id)
+                    setCode("")
+                    setCodeError(false)
+                  }}
                   className="p-3 rounded-lg border text-left transition-all"
                   style={{
                     borderColor: teamId === t.id ? t.color : "#1e2d3d",
@@ -123,7 +148,32 @@ export default function TeamPage() {
             </div>
           </div>
 
-          {/* Progress slider */}
+          {/* Team secret code */}
+          <div>
+            <label className="font-mono text-xs text-gray-400 block mb-2">
+              CODE ÉQUIPE (fourni par l&apos;orga)
+            </label>
+            <input
+              type="password"
+              value={code}
+              onChange={(e) => {
+                setCode(e.target.value)
+                setCodeError(false)
+              }}
+              className="w-full bg-transparent border rounded px-3 py-2 font-mono text-sm text-gray-300 focus:outline-none"
+              style={{ borderColor: codeError ? "#ff4444" : "#1e2d3d" }}
+            />
+            <p className="mt-1 font-mono text-[10px] text-gray-500">
+              Une seule personne par équipe reçoit ce code. À ne pas partager avec les autres groupes.
+            </p>
+            {codeError && (
+              <p className="mt-1 font-mono text-[10px] text-[#ff4444]">
+                Code incorrect. Vérifiez auprès de l&apos;orga.
+              </p>
+            )}
+          </div>
+
+          {/* Progress (pilotée automatiquement par le sprint choisi) */}
           <div>
             <label className="font-mono text-xs text-gray-400 block mb-2">
               PROGRESSION —{" "}
@@ -131,17 +181,6 @@ export default function TeamPage() {
                 {progress}%
               </span>
             </label>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={5}
-              value={progress}
-              onChange={(e) => setProgress(Number(e.target.value))}
-              className="w-full accent-current"
-              style={{ accentColor: team?.color ?? "#00d4ff" }}
-            />
-            {/* Visual bar */}
             <div className="progress-bar mt-2">
               <div
                 className="progress-fill"
@@ -151,6 +190,9 @@ export default function TeamPage() {
                 }}
               />
             </div>
+            <p className="mt-1 font-mono text-[10px] text-gray-500">
+              Choisissez simplement l&apos;étape de sprint ci-dessous, le pourcentage se met à jour tout seul.
+            </p>
           </div>
 
           {/* Label selector */}
@@ -210,7 +252,7 @@ export default function TeamPage() {
           {/* Submit button */}
           <button
             onClick={submit}
-            disabled={!teamId || status === "loading"}
+            disabled={status === "loading"}
             className="w-full py-3 rounded-lg font-display font-bold text-sm transition-all disabled:opacity-40"
             style={{
               background: status === "success"
